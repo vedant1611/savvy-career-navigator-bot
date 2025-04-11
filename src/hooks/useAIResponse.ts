@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type AIResponseOptions = {
   initialLoading?: boolean;
@@ -8,19 +8,24 @@ type AIResponseOptions = {
 export function useAIResponse({ initialLoading = false }: AIResponseOptions = {}) {
   const [loading, setLoading] = useState(initialLoading);
   const [error, setError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(localStorage.getItem('geminiApiKey'));
 
-  // Simulate getting a response from an AI API
+  const saveApiKey = (key: string) => {
+    localStorage.setItem('geminiApiKey', key);
+    setApiKey(key);
+  };
+
   const getResponse = async (prompt: string): Promise<string> => {
+    if (!apiKey) {
+      setError('Gemini API key is not set');
+      return 'Please set your Gemini API key first.';
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      // In a real implementation, this would be an API call to a service like Gemini
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-      
-      // Simple response logic - in a real app, this would call an API
-      const response = generateSimpleResponse(prompt);
-      
+      const response = await fetchGeminiResponse(prompt, apiKey);
       return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to get AI response';
@@ -31,31 +36,33 @@ export function useAIResponse({ initialLoading = false }: AIResponseOptions = {}
     }
   };
 
-  const generateSimpleResponse = (prompt: string): string => {
-    const lowerCasePrompt = prompt.toLowerCase();
-    
-    if (lowerCasePrompt.includes('resume') || lowerCasePrompt.includes('cv')) {
-      return "Based on your skills and experience, I recommend highlighting your technical expertise and quantifiable achievements on your resume. Use action verbs and tailor your resume to each job description by including relevant keywords.";
+  const fetchGeminiResponse = async (prompt: string, apiKey: string): Promise<string> => {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Gemini API request failed');
     }
-    
-    if (lowerCasePrompt.includes('interview')) {
-      return "For your upcoming interview, prepare to discuss your experience with specific examples using the STAR method. Research the company thoroughly and prepare thoughtful questions to ask the interviewer.";
-    }
-    
-    if (lowerCasePrompt.includes('career') || lowerCasePrompt.includes('job')) {
-      return "Looking at your profile and the current job market, roles in data analysis, product management, and UX design align well with your skills and show strong growth potential. Would you like me to provide more specific information about any of these career paths?";
-    }
-    
-    if (lowerCasePrompt.includes('skill') || lowerCasePrompt.includes('learn')) {
-      return "Based on your current skills and career interests, I recommend focusing on developing your data analysis, project management, and UX design skills. These are highly transferable and in-demand in today's job market.";
-    }
-    
-    return "I've analyzed your profile and the current job market. I'd be happy to provide personalized career advice, resume feedback, or interview preparation assistance. What specific aspect of your career journey would you like help with?";
+
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
   };
 
   return {
     loading,
     error,
+    apiKey,
+    saveApiKey,
     getResponse,
   };
 }
