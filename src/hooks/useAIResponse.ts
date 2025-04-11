@@ -67,7 +67,8 @@ export function useAIResponse({ initialLoading = false }: AIResponseOptions = {}
     console.log("Attempting to fetch from Gemini API...");
     
     try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+      // Updated API endpoint to use v1 instead of v1beta
+      const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

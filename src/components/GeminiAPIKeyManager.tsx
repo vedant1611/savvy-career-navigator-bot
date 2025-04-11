@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAIResponse } from '@/hooks/useAIResponse';
 import { toast } from 'sonner';
-import { Key, Trash2 } from 'lucide-react';
+import { Key, Trash2, Info } from 'lucide-react';
 
 export const GeminiAPIKeyManager = () => {
   const [key, setKey] = useState('');
@@ -61,9 +61,15 @@ export const GeminiAPIKeyManager = () => {
       {keyIsSet && (
         <p className="text-xs text-muted-foreground">API key is set ✓</p>
       )}
-      <p className="text-xs text-muted-foreground">
-        Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-career-primary hover:underline">Google AI Studio</a>
-      </p>
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>
+          Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-career-primary hover:underline">Google AI Studio</a>
+        </p>
+        <div className="flex items-start gap-1 bg-blue-50 p-2 rounded text-blue-700 border border-blue-100">
+          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <p>Make sure you've created a project in Google AI Studio and enabled the Gemini API before using your key.</p>
+        </div>
+      </div>
     </div>
   );
 };

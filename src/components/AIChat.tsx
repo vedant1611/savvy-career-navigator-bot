@@ -40,6 +40,11 @@ const AIChat = () => {
     }
   }, [error]);
 
+  useEffect(() => {
+    // Show API key input if no key is set
+    setShowApiKeyInput(!apiKey);
+  }, [apiKey]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
