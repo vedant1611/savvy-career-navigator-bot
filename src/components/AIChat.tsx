@@ -1,17 +1,19 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot, User, SendHorizontal, Key } from 'lucide-react';
+import { Bot, User, SendHorizontal, Key, AlertCircle } from 'lucide-react';
 import { useAIResponse } from '@/hooks/useAIResponse';
 import { GeminiAPIKeyManager } from '@/components/GeminiAPIKeyManager';
+import { toast } from 'sonner';
 
 type Message = {
   id: string;
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
+  error?: boolean;
 };
 
 const AIChat = () => {
@@ -24,11 +26,32 @@ const AIChat = () => {
     },
   ]);
   const [newMessage, setNewMessage] = useState('');
-  const { loading: isLoading, getResponse, apiKey } = useAIResponse();
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const { loading: isLoading, getResponse, apiKey, error } = useAIResponse();
+  const [showApiKeyInput, setShowApiKeyInput] = useState(!apiKey);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(`AI Error: ${error}`);
+    }
+  }, [error]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
+    
+    if (!apiKey) {
+      setShowApiKeyInput(true);
+      toast.error('Please set your Gemini API key first');
+      return;
+    }
 
     // Add user message
     const userMessage: Message = {
@@ -50,11 +73,23 @@ const AIChat = () => {
         content: aiResponse,
         sender: 'ai',
         timestamp: new Date(),
+        error: aiResponse.includes('error') || aiResponse.includes('Error'),
       };
       
       setMessages((prevMessages) => [...prevMessages, aiMessage]);
     } catch (error) {
       console.error("Error getting AI response:", error);
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Sorry, I couldn't process your request. Please check your API key and try again.",
+        sender: 'ai',
+        timestamp: new Date(),
+        error: true,
+      };
+      
+      setMessages((prevMessages) => [...prevMessages, errorMessage]);
     }
   };
 
@@ -113,11 +148,15 @@ const AIChat = () => {
                           className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                             message.sender === 'user'
                               ? 'bg-career-primary text-white'
-                              : 'bg-muted'
+                              : message.error 
+                                ? 'bg-destructive text-white'
+                                : 'bg-muted'
                           }`}
                         >
                           {message.sender === 'user' ? (
                             <User className="h-4 w-4" />
+                          ) : message.error ? (
+                            <AlertCircle className="h-4 w-4" />
                           ) : (
                             <Bot className="h-4 w-4" />
                           )}
@@ -126,10 +165,12 @@ const AIChat = () => {
                           className={`py-2 px-3 rounded-lg ${
                             message.sender === 'user'
                               ? 'bg-career-primary text-white'
-                              : 'bg-muted text-foreground'
+                              : message.error
+                                ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                                : 'bg-muted text-foreground'
                           }`}
                         >
-                          <p className="text-sm">{message.content}</p>
+                          <p className="text-sm whitespace-pre-line">{message.content}</p>
                         </div>
                       </div>
                     </div>
@@ -150,6 +191,7 @@ const AIChat = () => {
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
                 <div className="flex gap-2">
                   <Input
@@ -162,14 +204,15 @@ const AIChat = () => {
                   <Button 
                     className="bg-career-primary hover:bg-career-secondary"
                     onClick={handleSendMessage}
-                    disabled={!newMessage.trim() || isLoading || !apiKey}
+                    disabled={!newMessage.trim() || isLoading}
                   >
                     <SendHorizontal className="h-4 w-4" />
                     <span className="sr-only">Send message</span>
                   </Button>
                 </div>
                 {!apiKey && (
-                  <p className="text-sm text-destructive mt-2">
+                  <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5" />
                     Please set your Gemini API key to use the chat
                   </p>
                 )}
